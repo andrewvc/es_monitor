@@ -51,19 +51,20 @@ class EsMonitor < Sinatra::Base
 
     def graph_path(series_name, modifiers={})
       modifiers.keys.reduce(series_name) {|expr,modifier|
-        arguments = modifiers[modifier]
-        unless [Array, String, Symbol].member?(arguments.class) || arguments == true
-          raise ArgumentError, "Could not process modifier #{modifier}, bad argument in #{arguments.inspect}"
-        end
+        # Check our input, does the current modifier have args expressed as something
+        # arrayable? Note that +true+ is ignored, but allowed to pass to allow the first expr
+        # to follow the syntax
+        modifier_args = modifiers[modifier]
+        unless [Array, String, Symbol].member?(modifier_args.class) || modifier_args == true
+          raise ArgumentError, "Could not process modifier #{modifier}, bad argument in #{modifier_args}"
+        end        
         
-        expr_args = [expr]
+        # Cut out the true argument, always put the last expression into the first position
+        arguments_rest = Array(modifier_args).reject {|a| a == true}
+        arguments = arguments_rest.unshift expr # Unshift and save an Array!
         
-        if arguments == true
-          "#{modifier}(#{expr})"
-        else
-          args_str = ([expr] << Array(arguments)).join(",")
-          "#{modifier}(#{args_str})"
-        end
+        args_str = arguments.compact.join(",")
+        "#{modifier}(#{args_str})"
       }
     end
     
